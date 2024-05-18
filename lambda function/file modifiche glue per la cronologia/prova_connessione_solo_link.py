@@ -22,29 +22,29 @@ job = Job(glueContext)
 job.init(args['JOB_NAME'], args)
 #--
 # Leggi il dataset degli URL dei video
-videos_url_dataset_path = "s3://tedx-bellosi-2024-data/lista_video_primo_only_links.csv"
+videos_url_dataset_path = "s3://tedx-polo-2024-data/lista_video_primo_only_links.csv"
 videos_url_dataset = spark.read.option("header", "true").csv(videos_url_dataset_path)
 
 # Leggi il dataset principale dei video
-tedx_dataset_path = "s3://tedx-bellosi-2024-data/final_list.csv"
+tedx_dataset_path = "s3://tedx-polo-2024-data/final_list.csv"
 tedx_dataset = spark.read.option("header", "true").csv(tedx_dataset_path)
 
 # Esegui il join tra gli URL dei video e "final_list" per ottenere l'ID di ogni video
-videos_with_id = videos_url_dataset.join(tedx_dataset, videos_url_dataset.url == tedx_dataset.url, "left") \
-    .select(tedx_dataset["id"].alias("video_id"))
+videos_with_id = tedx_dataset.join(videos_url_dataset, videos_url_dataset.url == tedx_dataset.url, "left") \
+.select(tedx_dataset["id"].alias("video_id"))
 
 #---
 # READ TAGS DATASET
-tags_dataset_path = "s3://tedx-bellosi-2024-data/tags.csv"
+tags_dataset_path = "s3://tedx-polo-2024-data/tags.csv"
 tags_dataset = spark.read.option("header", "true").csv(tags_dataset_path)
 
 # JOIN TAGS AND VIDEO DATASETS
 tag_video_info = tags_dataset.join(videos_with_id, tags_dataset.id == videos_with_id.video_id, "left") \
-    .select(tags_dataset["tag"], videos_with_id["video_id"].alias("video_id"))
+.select(tags_dataset["tag"], videos_with_id["video_id"].alias("video_id"))
 
 # GROUP BY TAGS AND CREATE STRUCTURE
 tag_info = tag_video_info.groupBy("tag") \
-    .agg(count("*").alias("tag_count"), collect_list(struct(F.col("video_id"))).alias("videos"))
+.agg(count("*").alias("tag_count"), collect_list(struct(F.col("video_id"))).alias("videos"))
 
 # Genera un codice univoco di massimo 8 caratteri
 def generate_unique_id():
@@ -65,9 +65,9 @@ all_tags_info.show(truncate=False)
 all_tags_dynamic_frame = DynamicFrame.fromDF(all_tags_info, glueContext, "all_tags_dynamic_frame")
 
 write_mongo_options = {
-    "connectionName": "Progetto2",
+    "connectionName": "TEDprova",
     "database": "unibg_tedx_2024",
-    "collection": "tag_from_link_ofe",
+    "collection": "tag_from_link_ofe_2",
     "ssl": "true",
     "ssl.domain_match": "false",
     "replace_document_id_with_id": "true"  # Questo imposta il campo '_id' personalizzato come id del documento
